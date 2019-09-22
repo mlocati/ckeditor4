@@ -2613,6 +2613,21 @@
 			editor.widgets.destroy( sourceWidget, true );
 		} );
 
+		// Add support for dropping selection containing more than widget itself
+		// or more than one widget (#3441).
+		editor.on( 'drop', function( evt ) {
+			var dataTransfer = evt.data.dataTransfer,
+				id = dataTransfer.getData( 'cke/widget-id' ),
+				transferType = dataTransfer.getTransferType( editor );
+
+			if ( id !== '' || ( editor.widgets.selected.length > 0 &&
+				transferType != CKEDITOR.DATA_TRANSFER_INTERNAL ) ) {
+				return;
+			}
+
+			evt.data.dataTransfer.setData( 'text/html', getClipboardHtml( editor ) );
+		} );
+
 		editor.on( 'contentDom', function() {
 			var editable = editor.editable();
 
@@ -3396,21 +3411,7 @@
 			bookmarks = !isWholeSelection && editor.getSelection().createBookmarks( true );
 		}
 
-		copyBin.handle( getClipboardHtml() );
-
-		function getClipboardHtml() {
-			var selectedHtml = editor.getSelectedHtml( true );
-
-			if ( editor.widgets.focused ) {
-				return editor.widgets.focused.getClipboardHtml();
-			}
-
-			editor.once( 'toDataFormat', function( evt ) {
-				evt.data.widgetsCopy = true;
-			}, null, null, -1 );
-
-			return editor.dataProcessor.toDataFormat( selectedHtml );
-		}
+		copyBin.handle( getClipboardHtml( editor ) );
 
 		function handleCut() {
 			if ( focused ) {
@@ -3462,6 +3463,20 @@
 			this.editor.forceNextSelectionCheck();
 			this.editor.selectionChange( 1 );
 		}
+	}
+
+	function getClipboardHtml( editor ) {
+		var selectedHtml = editor.getSelectedHtml( true );
+
+		if ( editor.widgets.focused ) {
+			return editor.widgets.focused.getClipboardHtml();
+		}
+
+		editor.once( 'toDataFormat', function( evt ) {
+			evt.data.widgetsCopy = true;
+		}, null, null, -1 );
+
+		return editor.dataProcessor.toDataFormat( selectedHtml );
 	}
 
 	function setupWidget( widget, widgetDef ) {
